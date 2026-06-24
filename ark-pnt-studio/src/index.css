@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========== 全局基础样式 / Global base styles ========== */
+/* 苹果极简风全局重置 / Apple minimalist global reset */
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  width: 100%;
+}
+
+body {
+  background: linear-gradient(180deg, #fafafa 0%, #f5f5f7 100%);
+  color: #1d1d1f;
+  overflow-x: hidden;
+}
+
+/* 自定义滚动条 / Custom scrollbar - 苹果风细滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* ========== 工具类 / Utility classes ========== */
+/* 玻璃模糊效果 / Glass blur effect */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* 苹果风按钮 / Apple-style button */
+.btn-apple {
+  background: #0071e3;
+  color: #ffffff;
+  border-radius: 980px;
+  padding: 12px 24px;
+  font-weight: 500;
+  font-size: 17px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: none;
+}
+.btn-apple:hover {
+  background: #0077ed;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -8px rgba(0, 113, 227, 0.5);
+}
+.btn-apple:active {
+  transform: translateY(0);
+}
+.btn-apple:disabled {
+  background: #b0b0b5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 次级按钮 / Secondary button */
+.btn-secondary {
+  background: rgba(0, 0, 0, 0.04);
+  color: #1d1d1f;
+  border-radius: 980px;
+  padding: 12px 24px;
+  font-weight: 500;
+  font-size: 17px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: none;
+}
+.btn-secondary:hover {
+  background: rgba(0, 0, 0, 0.07);
+}
+
+/* 拖拽区域动画 / Dropzone animation */
+.dropzone-active {
+  background: rgba(0, 113, 227, 0.06) !important;
+  border-color: #0071e3 !important;
+  transform: scale(1.01);
+}
+
+/* 像素画布渲染优化 / Pixel canvas rendering optimization */
+.pixel-canvas {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* 加载动画 / Loading spinner */
+@keyframes spin-smooth {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spinner {
+  animation: spin-smooth 0.8s linear infinite;
+}
+
+/* 成功波纹动画 / Success ripple animation */
+@keyframes success-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.success-pulse {
+  animation: success-pulse 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
