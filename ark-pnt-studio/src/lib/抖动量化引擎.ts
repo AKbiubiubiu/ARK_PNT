@@ -84,11 +84,18 @@ function 计算感知距离平方(
 /**
  * 暴力查找最近颜色的 Color ID / Brute-force find nearest color's Color ID
  * ================================================================
- * 用于查找表预计算，遍历所有 127 种颜色找最近邻。
- * Used for lookup table precomputation, iterates all 127 colors to find nearest.
+ * 用于查找表预计算，遍历所有可用颜色找最近邻。
+ * Used for lookup table precomputation, iterates all available colors to find nearest.
  *
  * 注意：跳过 ID 0（透明色），因为透明色不应参与不透明像素的量化匹配。
  * Note: Skips ID 0 (transparent), as transparent should not match opaque pixels.
+ *
+ * 重要：仅使用 ID 1-100（生物色），不使用 ID 201-226（染料色）。
+ * Important: Only use ID 1-100 (creature colors), NOT ID 201-226 (dye colors).
+ * 真实 .pnt 文件分析表明，画布绘画仅支持生物色 ID 0-100。
+ * Real .pnt file analysis shows canvas paintings only support creature color IDs 0-100.
+ * 染料色 ID 201-226 在游戏中不被画布识别，会导致显示无色彩。
+ * Dye color IDs 201-226 are not recognized by the canvas in-game, causing blank colors.
  *
  * @param R - 红通道 0-255 / Red 0-255
  * @param G - 绿通道 0-255 / Green 0-255
@@ -102,6 +109,8 @@ function 查找最近颜色ID(R: number, G: number, B: number): number {
     const 颜色 = 方舟颜色列表[i];
     // 跳过透明色 / Skip transparent color
     if (颜色.透明) continue;
+    // 跳过染料色 (ID > 100)，画布绘画不支持 / Skip dye colors (ID > 100), not supported by canvas
+    if (颜色.编号 > 100) continue;
     const 距离 = 计算感知距离平方(R, G, B, 颜色.红, 颜色.绿, 颜色.蓝);
     if (距离 < 最小距离) {
       最小距离 = 距离;
@@ -324,6 +333,10 @@ export function 重采样图像(
   // 启用高质量平滑 / Enable high-quality smoothing
   目标上下文.imageSmoothingEnabled = true;
   目标上下文.imageSmoothingQuality = 'high';
+  // 填充白色背景，避免透明区域在游戏中显示为无色
+  // Fill white background to avoid transparent areas showing as blank in-game
+  目标上下文.fillStyle = '#FFFFFF';
+  目标上下文.fillRect(0, 0, 目标宽度, 目标高度);
   // 绘制缩放图像 / Draw scaled image
   目标上下文.drawImage(源画布, 0, 0, 目标宽度, 目标高度);
 

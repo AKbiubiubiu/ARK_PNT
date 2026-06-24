@@ -130,7 +130,9 @@ export default function App() {
       const 字节流 = 生成Pnt字节流(量化后索引);
 
       // 触发下载 / Trigger download
-      const 文件名 = `方舟绘画_${选中对象.后缀}.pnt`;
+      // 文件名必须使用 ASCII 字符，游戏不识别非 ASCII 文件名
+      // Filename must use ASCII characters, game doesn't recognize non-ASCII filenames
+      const 文件名 = `ARKPaint_${选中对象.后缀}.pnt`;
       下载二进制文件(字节流, 文件名);
 
       set导出成功(true);
@@ -219,7 +221,7 @@ export default function App() {
                       将你的图片转换为方舟绘画
                     </h2>
                     <p className="text-sm text-gray-500 md:text-base">
-                      像素级丝滑编辑 · 127 种官方颜色精准量化 · 二进制严丝合缝
+                      像素级丝滑编辑 · 101 种画布可用颜色精准量化 · 二进制严丝合缝
                     </p>
                   </motion.div>
 
@@ -420,8 +422,13 @@ export default function App() {
                           )}
                         </button>
                         <p className="mt-2 text-center text-[11px] text-gray-400">
-                          文件名格式：方舟绘画{选中对象.后缀}.pnt
+                          文件名格式：ARKPaint{选中对象.后缀}.pnt
                         </p>
+                        <div className="mt-3 rounded-xl bg-amber-50 px-4 py-2.5">
+                          <p className="text-[11px] leading-relaxed text-amber-700">
+                            提示：在游戏中加载绘画时，需要在物品栏中放置足够的染料。游戏会自动消耗对应颜色的染料来渲染画面。
+                          </p>
+                        </div>
                       </div>
                     </motion.div>
                   </div>
@@ -466,7 +473,7 @@ export default function App() {
             方舟 PNT 工坊 · 基于 Floyd-Steinberg 抖动 + redmean 感知距离 + 预计算查找表
           </p>
           <p className="mt-1 text-[11px] text-gray-400">
-            数据来源：ARK Fandom Wiki · 127 种官方颜色（ID 0-100 + 201-226）· 二进制规范 20B 头 + W×H×1 索引色
+            数据来源：ARK Fandom Wiki · 101 种画布可用颜色（ID 0-100 生物色）· 二进制规范 20B 头 + W×H×1 索引色
           </p>
         </div>
       </footer>
