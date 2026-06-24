@@ -74,15 +74,12 @@ export function 逆向解析舱() {
   }, []);
 
   // dropzone 配置：接受 .pnt 文件 / Dropzone config: accept .pnt files
+  // 不限制 MIME 类型，仅通过扩展名校验 / No MIME restriction, validate by extension only
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    // 不限制 MIME 类型，仅通过扩展名过滤 / No MIME restriction, filter by extension only
-    accept: {
-      'application/octet-stream': ['.pnt'],
-    },
     multiple: false,
     noClick: false,
-    // 允许任何文件类型进入，由校验逻辑过滤 / Allow any file type in, filtered by validation
+    // 不设 accept，允许任何文件拖入，由 validator 过滤 / No accept, allow any file, filter by validator
     validator: (文件) => {
       if (!文件.name.toLowerCase().endsWith('.pnt')) {
         return {
@@ -147,17 +144,17 @@ export function 逆向解析舱() {
         className={`
           relative cursor-pointer rounded-2xl border-2 border-dashed
           transition-all duration-300 ease-apple
-          glass-panel
+          bg-white/5 ring-1 ring-white/10 backdrop-blur-xl
           flex flex-col items-center justify-center
           px-4 py-8
-          ${isDragActive ? 'dropzone-active' : 'border-gray-300 hover:border-blue-400'}
+          ${isDragActive ? 'border-cyan-400 bg-cyan-500/10' : 'border-white/20 hover:border-cyan-400/50'}
         `}
       >
         <input {...getInputProps()} />
         <motion.div
           animate={{ rotate: 加载中 ? 360 : 0 }}
           transition={{ duration: 0.8, repeat: 加载中 ? Infinity : 0, ease: 'linear' }}
-          className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-gray-500"
+          className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-cyan-400"
         >
           {加载中 ? (
             <Loader2 className="h-5 w-5" />
@@ -165,10 +162,10 @@ export function 逆向解析舱() {
             <FileUp className="h-5 w-5" />
           )}
         </motion.div>
-        <p className="text-center text-sm font-medium text-gray-800">
+        <p className="text-center text-sm font-medium text-white">
           {加载中 ? '正在解析...' : '上传 .pnt 文件逆向查看'}
         </p>
-        <p className="mt-1 text-center text-xs text-gray-500">
+        <p className="mt-1 text-center text-xs text-zinc-500">
           点击或拖拽 .pnt 文件到此处
         </p>
       </div>
@@ -185,34 +182,34 @@ export function 逆向解析舱() {
           >
             {/* 元数据 / Metadata */}
             <div className="grid grid-cols-4 gap-2">
-              <div className="rounded-xl bg-gray-50 p-3 text-center">
-                <p className="text-xs text-gray-500">宽度</p>
-                <p className="text-base font-semibold text-gray-900">{解析结果.宽度}</p>
+              <div className="rounded-xl bg-white/5 p-3 text-center ring-1 ring-white/10">
+                <p className="text-xs text-zinc-500">宽度</p>
+                <p className="text-base font-semibold text-white">{解析结果.宽度}</p>
               </div>
-              <div className="rounded-xl bg-gray-50 p-3 text-center">
-                <p className="text-xs text-gray-500">高度</p>
-                <p className="text-base font-semibold text-gray-900">{解析结果.高度}</p>
+              <div className="rounded-xl bg-white/5 p-3 text-center ring-1 ring-white/10">
+                <p className="text-xs text-zinc-500">高度</p>
+                <p className="text-base font-semibold text-white">{解析结果.高度}</p>
               </div>
-              <div className="rounded-xl bg-gray-50 p-3 text-center">
-                <p className="text-xs text-gray-500">字节</p>
-                <p className="text-base font-semibold text-gray-900">
+              <div className="rounded-xl bg-white/5 p-3 text-center ring-1 ring-white/10">
+                <p className="text-xs text-zinc-500">字节</p>
+                <p className="text-base font-semibold text-white">
                   {格式化字节(解析结果.字节大小).split(' ')[0]}
                 </p>
               </div>
-              <div className="rounded-xl bg-gray-50 p-3 text-center">
-                <p className="text-xs text-gray-500">颜色数</p>
-                <p className="text-base font-semibold text-gray-900">{解析结果.唯一颜色数}</p>
+              <div className="rounded-xl bg-white/5 p-3 text-center ring-1 ring-white/10">
+                <p className="text-xs text-zinc-500">颜色数</p>
+                <p className="text-base font-semibold text-white">{解析结果.唯一颜色数}</p>
               </div>
             </div>
 
             {/* 画布 / Canvas */}
-            <div className="relative flex items-center justify-center rounded-2xl bg-gray-50 p-4">
+            <div className="relative flex items-center justify-center rounded-2xl bg-black/30 p-4 ring-1 ring-white/5">
               <div className="relative" style={{ width: 预览尺寸, height: 预览尺寸 }}>
                 <canvas
                   ref={canvas引用}
                   onMouseMove={处理鼠标移动}
                   onMouseLeave={() => set悬停染料(null)}
-                  className="pixel-canvas h-full w-full rounded-lg border border-gray-200 shadow-sm"
+                  className="pixel-canvas h-full w-full rounded-lg border border-white/10 shadow-lg"
                   style={{ imageRendering: 'pixelated', cursor: 'crosshair' }}
                 />
 
@@ -221,7 +218,7 @@ export function 逆向解析舱() {
                   <motion.div
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="pointer-events-none absolute z-10 flex items-center gap-2 rounded-lg bg-gray-900/90 px-2.5 py-1.5 backdrop-blur-apple"
+                    className="pointer-events-none absolute z-10 flex items-center gap-2 rounded-lg bg-zinc-900/95 px-2.5 py-1.5 backdrop-blur-xl ring-1 ring-white/10"
                     style={{
                       left: Math.min(悬停染料.x + 12, 预览尺寸 - 160),
                       top: Math.max(悬停染料.y - 32, 0),
@@ -236,16 +233,16 @@ export function 逆向解析舱() {
                     <span className="text-xs font-medium text-white">
                       {悬停染料.染料.中文名}
                     </span>
-                    <span className="text-[10px] text-gray-400">
+                    <span className="text-[10px] text-zinc-500">
                       ID #{悬停染料.染料.编号}
                     </span>
                   </motion.div>
                 )}
 
                 {/* 提示条 / Hint bar */}
-                <div className="absolute -bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-gray-900/80 px-3 py-1 backdrop-blur-apple">
-                  <Eye className="h-3 w-3 text-white" />
-                  <span className="text-[10px] text-white">悬停像素查看颜色</span>
+                <div className="absolute -bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-zinc-900/80 px-3 py-1 backdrop-blur-xl ring-1 ring-white/10">
+                  <Eye className="h-3 w-3 text-cyan-400" />
+                  <span className="text-[10px] text-zinc-300">悬停像素查看颜色</span>
                 </div>
               </div>
             </div>
@@ -257,7 +254,7 @@ export function 逆向解析舱() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center rounded-2xl bg-gray-50 py-12 text-gray-400"
+              className="flex flex-col items-center justify-center rounded-2xl bg-black/20 py-12 text-zinc-600 ring-1 ring-white/5"
             >
               <FileX className="mb-2 h-8 w-8 opacity-40" />
               <p className="text-sm">尚未加载 .pnt 文件</p>

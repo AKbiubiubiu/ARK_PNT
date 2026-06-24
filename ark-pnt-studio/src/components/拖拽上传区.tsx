@@ -67,15 +67,14 @@ export function 拖拽上传区({ onFileAccepted }: 拖拽上传区属性) {
   return (
     <motion.div
       {...(getRootProps() as any)}
-      // 苹果风玻璃面板 + 悬停放大动效 / Apple glass panel + hover scale
       className={`
         relative cursor-pointer rounded-3xl border-2 border-dashed
         transition-all duration-300 ease-apple
-        glass-panel shadow-apple
+        bg-white/5 ring-1 ring-white/10 backdrop-blur-xl shadow-2xl
         flex flex-col items-center justify-center
         px-6 py-12 md:py-16
-        ${isDragActive ? 'dropzone-active scale-[1.01]' : 'border-gray-300 hover:border-blue-400 hover:shadow-apple-hover'}
-        ${isDragReject ? 'border-red-400 bg-red-50/50' : ''}
+        ${isDragActive ? 'border-cyan-400 bg-cyan-500/10 scale-[1.01]' : 'border-white/20 hover:border-cyan-400/50'}
+        ${isDragReject ? 'border-red-400 bg-red-500/10' : ''}
       `}
       whileHover={{ scale: isDragActive ? 1.01 : 1.005 }}
       whileTap={{ scale: 0.995 }}
@@ -87,7 +86,7 @@ export function 拖拽上传区({ onFileAccepted }: 拖拽上传区属性) {
         className={`
           mb-4 flex h-16 w-16 items-center justify-center rounded-2xl
           transition-colors duration-300
-          ${isDragActive ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}
+          ${isDragActive ? 'bg-cyan-500 text-white' : 'bg-white/10 text-cyan-400'}
         `}
         animate={{
           scale: isDragActive ? 1.1 : 1,
@@ -103,19 +102,19 @@ export function 拖拽上传区({ onFileAccepted }: 拖拽上传区属性) {
       </motion.div>
 
       {/* 文案 / Text */}
-      <p className="text-center text-base font-medium text-gray-800 md:text-lg">
+      <p className="text-center text-base font-medium text-white md:text-lg">
         {isDragActive
           ? '松开鼠标即可上传'
           : '拖拽图片到此处，或点击选择文件'}
       </p>
-      <p className="mt-2 text-center text-sm text-gray-500">
+      <p className="mt-2 text-center text-sm text-zinc-400">
         支持 PNG · JPG · WebP · GIF · BMP · 最大 20MB
       </p>
 
       {/* 拖拽时的脉冲提示 / Pulse hint when dragging */}
       {isDragActive && (
         <motion.div
-          className="absolute inset-0 rounded-3xl border-2 border-blue-400"
+          className="absolute inset-0 rounded-3xl border-2 border-cyan-400"
           initial={{ opacity: 0.6 }}
           animate={{ opacity: [0.6, 0.2, 0.6] }}
           transition={{ duration: 1.5, repeat: Infinity }}
