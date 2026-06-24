@@ -1,8 +1,8 @@
 /**
  * 逆向解析舱组件 / Reverse Parser Component
  * ================================================================
- * 上传已有 .pnt 文件，100% 准确反向解析并高保真还原，支持像素悬停染料名称。
- * Upload existing .pnt file, 100% accurate reverse parse with hover dye name.
+ * 上传已有 .pnt 文件，100% 准确反向解析并高保真还原，支持像素悬停颜色名称。
+ * Upload existing .pnt file, 100% accurate reverse parse with hover color name.
  */
 
 import { useCallback, useRef, useState, useEffect } from 'react';
@@ -10,14 +10,29 @@ import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileUp, FileX, Loader2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
-import { 解析Pnt字节流, 粗略校验Pnt格式, type 解析结果类型 } from '../lib/Pnt二进制引擎';
+import {
+  解析Pnt字节流,
+  校验Pnt格式,
+  type 解析结果类型,
+} from '../lib/Pnt二进制引擎';
 import { 格式化字节 } from '../lib/图像工具';
-import { 染料调色板, type 染料类型 } from '../lib/染料调色板';
+import { 按编号查找颜色, type 方舟颜色类型 } from '../lib/染料调色板';
+
+// 透明色常量 / Transparent color constant
+const 透明色: 方舟颜色类型 = {
+  编号: 0,
+  中文名: '透明',
+  英文名: 'Transparent',
+  红: 0,
+  绿: 0,
+  蓝: 0,
+  透明: true,
+};
 
 export function 逆向解析舱() {
   const [解析结果, set解析结果] = useState<解析结果类型 | null>(null);
   const [加载中, set加载中] = useState(false);
-  const [悬停染料, set悬停染料] = useState<{ 染料: 染料类型; x: number; y: number } | null>(null);
+  const [悬停染料, set悬停染料] = useState<{ 染料: 方舟颜色类型; x: number; y: number } | null>(null);
   const canvas引用 = useRef<HTMLCanvasElement>(null);
 
   // 处理 .pnt 文件 / Handle .pnt file
@@ -32,10 +47,10 @@ export function 逆向解析舱() {
       // 读取文件为 ArrayBuffer / Read file as ArrayBuffer
       const 缓冲区 = await 文件.arrayBuffer();
 
-      // 粗略校验 / Rough validation
-      if (!粗略校验Pnt格式(缓冲区.byteLength)) {
+      // 校验 .pnt 格式 / Validate .pnt format
+      if (!校验Pnt格式(缓冲区)) {
         toast.error('文件格式无效', {
-          description: `文件大小 ${格式化字节(缓冲区.byteLength)} 不符合 .pnt 规范`,
+          description: `文件大小 ${格式化字节(缓冲区.byteLength)} 不符合 .pnt 规范（20B 头 + W×H 索引色）`,
         });
         set加载中(false);
         return;
@@ -46,7 +61,7 @@ export function 逆向解析舱() {
       set解析结果(结果);
 
       toast.success('解析成功', {
-        description: `${结果.宽度} × ${结果.高度} · ${格式化字节(结果.字节大小)}`,
+        description: `${结果.宽度} × ${结果.高度} · ${格式化字节(结果.字节大小)} · ${结果.唯一颜色数} 种颜色`,
       });
     } catch (错误) {
       toast.error('解析失败', {
@@ -58,14 +73,25 @@ export function 逆向解析舱() {
     }
   }, []);
 
+  // dropzone 配置：接受 .pnt 文件 / Dropzone config: accept .pnt files
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    // 不限制 MIME 类型，仅通过扩展名过滤 / No MIME restriction, filter by extension only
     accept: {
       'application/octet-stream': ['.pnt'],
-      '': ['.pnt'], // 兜底 / Fallback
     },
     multiple: false,
     noClick: false,
+    // 允许任何文件类型进入，由校验逻辑过滤 / Allow any file type in, filtered by validation
+    validator: (文件) => {
+      if (!文件.name.toLowerCase().endsWith('.pnt')) {
+        return {
+          code: 'not-pnt',
+          message: '仅支持 .pnt 文件 / Only .pnt files supported',
+        };
+      }
+      return null;
+    },
   });
 
   // 绘制解析结果到画布 / Draw parse result to canvas
@@ -75,11 +101,12 @@ export function 逆向解析舱() {
     画布.width = 解析结果.宽度;
     画布.height = 解析结果.高度;
     const 上下文 = 画布.getContext('2d')!;
+    // 使用解析结果中的 RGBA 像素数据 / Use RGBA pixel data from parse result
     const 图像数据 = new ImageData(解析结果.像素.数据, 解析结果.宽度, 解析结果.高度);
     上下文.putImageData(图像数据, 0, 0);
   }, [解析结果]);
 
-  // 鼠标悬停 / Mouse hover
+  // 鼠标悬停 - 通过 Color ID 索引直接查找 / Mouse hover - lookup via Color ID index
   const 处理鼠标移动 = useCallback(
     (event: React.MouseEvent<HTMLCanvasElement>) => {
       if (!解析结果 || !canvas引用.current) return;
@@ -93,38 +120,30 @@ export function 逆向解析舱() {
         return;
       }
 
-      const 索引 = (y * 解析结果.宽度 + x) * 4;
-      const R = 解析结果.像素.数据[索引 + 0];
-      const G = 解析结果.像素.数据[索引 + 1];
-      const B = 解析结果.像素.数据[索引 + 2];
-      const A = 解析结果.像素.数据[索引 + 3];
+      // 直接从索引数据读取 Color ID / Read Color ID directly from index data
+      const colorId = 解析结果.索引.数据[y * 解析结果.宽度 + x];
 
-      if (A === 0) {
-        set悬停染料({
-          染料: { 编号: 0, 中文名: '透明', 英文名: 'Transparent', 红: 0, 绿: 0, 蓝: 0 },
-          x: event.clientX - 边界矩形.left,
-          y: event.clientY - 边界矩形.top,
-        });
-        return;
-      }
-
-      const 匹配染料 = 染料调色板.find((d) => d.红 === R && d.绿 === G && d.蓝 === B);
-      if (匹配染料) {
-        set悬停染料({
-          染料: 匹配染料,
-          x: event.clientX - 边界矩形.left,
-          y: event.clientY - 边界矩形.top,
-        });
-      }
+      // 通过 Color ID 查找颜色对象 / Lookup color object by Color ID
+      const 颜色 = 按编号查找颜色(colorId) ?? 透明色;
+      set悬停染料({
+        染料: 颜色,
+        x: event.clientX - 边界矩形.left,
+        y: event.clientY - 边界矩形.top,
+      });
     },
     [解析结果]
   );
+
+  // 计算预览尺寸（保持比例，最大 384px）/ Compute preview size (preserve aspect, max 384px)
+  const 预览尺寸 = 解析结果
+    ? Math.min(384, Math.max(256, 解析结果.宽度))
+    : 256;
 
   return (
     <div className="space-y-4">
       {/* 上传区 / Upload area */}
       <div
-        {...getRootProps()}
+        {...(getRootProps() as any)}
         className={`
           relative cursor-pointer rounded-2xl border-2 border-dashed
           transition-all duration-300 ease-apple
@@ -165,7 +184,7 @@ export function 逆向解析舱() {
             className="space-y-3"
           >
             {/* 元数据 / Metadata */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <div className="rounded-xl bg-gray-50 p-3 text-center">
                 <p className="text-xs text-gray-500">宽度</p>
                 <p className="text-base font-semibold text-gray-900">{解析结果.宽度}</p>
@@ -180,11 +199,15 @@ export function 逆向解析舱() {
                   {格式化字节(解析结果.字节大小).split(' ')[0]}
                 </p>
               </div>
+              <div className="rounded-xl bg-gray-50 p-3 text-center">
+                <p className="text-xs text-gray-500">颜色数</p>
+                <p className="text-base font-semibold text-gray-900">{解析结果.唯一颜色数}</p>
+              </div>
             </div>
 
             {/* 画布 / Canvas */}
             <div className="relative flex items-center justify-center rounded-2xl bg-gray-50 p-4">
-              <div className="relative" style={{ width: 256, height: 256 }}>
+              <div className="relative" style={{ width: 预览尺寸, height: 预览尺寸 }}>
                 <canvas
                   ref={canvas引用}
                   onMouseMove={处理鼠标移动}
@@ -200,7 +223,7 @@ export function 逆向解析舱() {
                     animate={{ opacity: 1, y: 0 }}
                     className="pointer-events-none absolute z-10 flex items-center gap-2 rounded-lg bg-gray-900/90 px-2.5 py-1.5 backdrop-blur-apple"
                     style={{
-                      left: Math.min(悬停染料.x + 12, 256 - 140),
+                      left: Math.min(悬停染料.x + 12, 预览尺寸 - 160),
                       top: Math.max(悬停染料.y - 32, 0),
                     }}
                   >
@@ -214,7 +237,7 @@ export function 逆向解析舱() {
                       {悬停染料.染料.中文名}
                     </span>
                     <span className="text-[10px] text-gray-400">
-                      #{悬停染料.染料.编号}
+                      ID #{悬停染料.染料.编号}
                     </span>
                   </motion.div>
                 )}
@@ -222,7 +245,7 @@ export function 逆向解析舱() {
                 {/* 提示条 / Hint bar */}
                 <div className="absolute -bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-gray-900/80 px-3 py-1 backdrop-blur-apple">
                   <Eye className="h-3 w-3 text-white" />
-                  <span className="text-[10px] text-white">悬停像素查看染料</span>
+                  <span className="text-[10px] text-white">悬停像素查看颜色</span>
                 </div>
               </div>
             </div>

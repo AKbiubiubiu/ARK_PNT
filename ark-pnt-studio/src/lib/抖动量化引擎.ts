@@ -7,12 +7,22 @@
  *
  * 设计目标 / Design goals:
  *   - 画质：redmean 距离比纯欧氏距离更贴近人眼感知 / Better perceptual accuracy
- *   - 速度：查找表查表 O(1)，单帧 256×256 量化 < 3ms / O(1) lookup, <3ms per frame
+ *   - 速度：查找表查表 O(1)，单帧 256×256 量化 < 5ms / O(1) lookup, <5ms per frame
  *   - 像素艺术感：误差扩散避免色块断层 / Error diffusion avoids banding
+ *   - 输出 Color ID 索引，直接可生成 .pnt / Outputs Color ID indices, directly usable for .pnt
  */
 
-import { 染料调色板, 染料总数, type 染料类型 } from './染料调色板';
-import type { 像素矩阵类型 } from './Pnt二进制引擎';
+import { 方舟颜色列表, 方舟颜色总数, 透明颜色ID } from './染料调色板';
+import type { 像素矩阵类型, 索引像素矩阵类型 } from './Pnt二进制引擎';
+
+/**
+ * Color ID → RGB 快速映射表 / Fast Color ID → RGB map
+ * 用于抖动量化时快速查找 Color ID 对应的 RGB 值（避免每像素线性搜索）。
+ * Used during dithering to quickly look up RGB for Color ID (avoids per-pixel linear search).
+ */
+const 编号到RGB快速映射: Map<number, { 红: number; 绿: number; 蓝: number }> = new Map(
+  方舟颜色列表.map((颜色) => [颜色.编号, { 红: 颜色.红, 绿: 颜色.绿, 蓝: 颜色.蓝 }])
+);
 
 /**
  * 查找表量化位深 / Lookup table quantization bit depth
@@ -27,10 +37,10 @@ const 查找表掩码 = 查找表每通道级数 - 1;   // 0x1F / mask 0x1F
  * 预计算查找表 / Precomputed lookup table
  * 索引方式：(R量化 << 10) | (G量化 << 5) | B量化
  * Index: (RQuantized << 10) | (GQuantized << 5) | BQuantized
- * 值为对应染料在 染料调色板 中的索引。
- * Value is the dye index in the palette.
+ * 值为对应的 ARK Color ID（0-226）。
+ * Value is the corresponding ARK Color ID (0-226).
  */
-let 预计算查找表: Int8Array | null = null;
+let 预计算查找表: Uint8Array | null = null;
 
 /**
  * 将 0-255 的通道值量化为 5 位（0-31）/ Quantize 0-255 channel to 5 bits (0-31)
@@ -44,7 +54,7 @@ function 量化通道(值: number): number {
 /**
  * 计算感知加权距离平方（redmean 算法）/ Compute perceptual weighted distance squared (redmean)
  * ================================================================
- * 公式来源：https://en.wikipedia.org/wiki/Color_difference
+ * 公式来源 / Formula source: https://en.wikipedia.org/wiki/Color_difference
  *   r̄ = (R₁ + R₂) / 2
  *   ΔR = (2 + r̄/256) × (R₁−R₂)²
  *   ΔG = 4 × (G₁−G₂)²
@@ -72,35 +82,40 @@ function 计算感知距离平方(
 }
 
 /**
- * 暴力查找最近染料索引 / Brute-force find nearest dye index
+ * 暴力查找最近颜色的 Color ID / Brute-force find nearest color's Color ID
  * ================================================================
- * 用于查找表预计算，遍历所有 25 种染料找最近邻。
- * Used for lookup table precomputation, iterates all 25 dyes to find nearest.
+ * 用于查找表预计算，遍历所有 127 种颜色找最近邻。
+ * Used for lookup table precomputation, iterates all 127 colors to find nearest.
+ *
+ * 注意：跳过 ID 0（透明色），因为透明色不应参与不透明像素的量化匹配。
+ * Note: Skips ID 0 (transparent), as transparent should not match opaque pixels.
  *
  * @param R - 红通道 0-255 / Red 0-255
  * @param G - 绿通道 0-255 / Green 0-255
  * @param B - 蓝通道 0-255 / Blue 0-255
- * @returns 染料在调色板中的索引 / Dye index in palette
+ * @returns 最近颜色的 Color ID / Nearest color's Color ID
  */
-function 查找最近染料索引(R: number, G: number, B: number): number {
-  let 最近索引 = 0;
+function 查找最近颜色ID(R: number, G: number, B: number): number {
+  let 最近ID = 1; // 默认 ID 1（红色）/ Default ID 1 (red)
   let 最小距离 = Infinity;
-  for (let i = 0; i < 染料总数; i++) {
-    const 染料 = 染料调色板[i];
-    const 距离 = 计算感知距离平方(R, G, B, 染料.红, 染料.绿, 染料.蓝);
+  for (let i = 0; i < 方舟颜色总数; i++) {
+    const 颜色 = 方舟颜色列表[i];
+    // 跳过透明色 / Skip transparent color
+    if (颜色.透明) continue;
+    const 距离 = 计算感知距离平方(R, G, B, 颜色.红, 颜色.绿, 颜色.蓝);
     if (距离 < 最小距离) {
       最小距离 = 距离;
-      最近索引 = i;
+      最近ID = 颜色.编号;
     }
   }
-  return 最近索引;
+  return 最近ID;
 }
 
 /**
  * 初始化查找表 / Initialize lookup table
  * ================================================================
- * 预计算 32768 种量化颜色的最近染料索引。
- * Precompute nearest dye index for 32768 quantized colors.
+ * 预计算 32768 种量化颜色的最近 Color ID。
+ * Precompute nearest Color ID for 32768 quantized colors.
  * 仅在首次调用时执行，后续直接查表。
  * Executes only on first call, subsequent calls use lookup.
  */
@@ -108,9 +123,9 @@ export function 初始化查找表(): void {
   // 已初始化则跳过 / Skip if already initialized
   if (预计算查找表 !== null) return;
 
-  // 分配 32768 项 Int8Array（25 种染料索引 0-24，Int8 足够）
-  // Allocate 32768-entry Int8Array (25 dye indices 0-24, Int8 sufficient)
-  预计算查找表 = new Int8Array(查找表每通道级数 * 查找表每通道级数 * 查找表每通道级数);
+  // 分配 32768 项 Uint8Array（Color ID 0-226，Uint8 足够）
+  // Allocate 32768-entry Uint8Array (Color ID 0-226, Uint8 sufficient)
+  预计算查找表 = new Uint8Array(查找表每通道级数 * 查找表每通道级数 * 查找表每通道级数);
 
   // 遍历所有量化颜色组合 / Iterate all quantized color combinations
   for (let r = 0; r < 查找表每通道级数; r++) {
@@ -120,25 +135,25 @@ export function 初始化查找表(): void {
         const R = (r << 3) | 4; // 中心值偏移 4 / Center offset 4
         const G = (g << 3) | 4;
         const B = (b << 3) | 4;
-        // 查找最近染料 / Find nearest dye
-        const 索引 = 查找最近染料索引(R, G, B);
+        // 查找最近 Color ID / Find nearest Color ID
+        const colorId = 查找最近颜色ID(R, G, B);
         // 计算一维索引 / Compute 1D index
         const 一维索引 = (r << 10) | (g << 5) | b;
-        预计算查找表[一维索引] = 索引;
+        预计算查找表[一维索引] = colorId;
       }
     }
   }
 }
 
 /**
- * 通过查找表快速查找最近染料 / Fast nearest dye lookup via lookup table
+ * 通过查找表快速查找最近 Color ID / Fast nearest Color ID lookup via lookup table
  * ================================================================
  * @param R - 红通道 0-255 / Red 0-255
  * @param G - 绿通道 0-255 / Green 0-255
  * @param B - 蓝通道 0-255 / Blue 0-255
- * @returns 染料对象 / Dye object
+ * @returns ARK Color ID / ARK Color ID
  */
-function 通过查找表查找染料(R: number, G: number, B: number): 染料类型 {
+function 通过查找表查找颜色ID(R: number, G: number, B: number): number {
   // 确保查找表已初始化 / Ensure lookup table is initialized
   if (预计算查找表 === null) {
     初始化查找表();
@@ -148,8 +163,7 @@ function 通过查找表查找染料(R: number, G: number, B: number): 染料类
   const g = 量化通道(G);
   const b = 量化通道(B);
   const 一维索引 = (r << 10) | (g << 5) | b;
-  const 染料索引 = 预计算查找表![一维索引];
-  return 染料调色板[染料索引];
+  return 预计算查找表![一维索引];
 }
 
 /**
@@ -158,22 +172,22 @@ function 通过查找表查找染料(R: number, G: number, B: number): 染料类
  * 算法流程 / Algorithm flow:
  *   1. 复制原始像素到工作缓冲区（Float32 防止误差累积溢出）
  *      Copy original pixels to working buffer (Float32 to avoid overflow)
- *   2. 逐像素通过查找表查找最近染料
- *      Per-pixel nearest dye lookup via lookup table
+ *   2. 逐像素通过查找表查找最近 Color ID
+ *      Per-pixel nearest Color ID lookup via lookup table
  *   3. 计算量化误差，按 7/16, 3/16, 5/16, 1/16 扩散至右、左下、下、右下邻居
  *      Compute quantization error, diffuse to neighbors with weights
- *   4. 透明像素（Alpha=0）跳过抖动，保持透明
- *      Transparent pixels (Alpha=0) skip dithering, remain transparent
+ *   4. 透明像素（Alpha=0）直接映射为 Color ID 0
+ *      Transparent pixels (Alpha=0) map directly to Color ID 0
  *
  * @param 原始像素 - 输入 RGBA 像素矩阵 / Input RGBA pixel matrix
  * @param 抖动强度 - 0-1，控制误差扩散幅度（0=无抖动，1=标准 FS）/ 0-1 dithering strength
- * @returns 量化后的 RGBA 像素矩阵 / Quantized RGBA pixel matrix
+ * @returns 量化后的 Color ID 索引像素矩阵 / Quantized Color ID indexed pixel matrix
  * @throws 当输入无效时抛出错误 / Throws when input is invalid
  */
 export function 执行抖动量化(
   原始像素: 像素矩阵类型,
   抖动强度: number = 1.0
-): 像素矩阵类型 {
+): 索引像素矩阵类型 {
   // ---- 输入校验 / Input validation ----
   if (!原始像素 || !原始像素.数据) {
     throw new Error('原始像素矩阵无效 / Invalid input pixel matrix');
@@ -198,8 +212,8 @@ export function 执行抖动量化(
     工作缓冲区[i * 3 + 2] = 数据[i * 4 + 2]; // B
   }
 
-  // ---- 创建输出缓冲区 / Create output buffer ----
-  const 输出数据 = new Uint8ClampedArray(数据.length);
+  // ---- 创建输出缓冲区（Color ID 索引）/ Create output buffer (Color ID indices) ----
+  const 输出索引 = new Uint8Array(像素总数);
 
   // ---- 逐像素处理 / Process each pixel ----
   for (let y = 0; y < 高度; y++) {
@@ -208,12 +222,9 @@ export function 执行抖动量化(
       const 当前像素索引 = (y * 宽度 + x) * 4;
       const 原始Alpha = 数据[当前像素索引 + 3];
 
-      // 透明像素直接跳过，保持透明 / Transparent pixels skip, remain transparent
+      // 透明像素直接映射为 Color ID 0 / Transparent pixels map to Color ID 0
       if (原始Alpha === 0) {
-        输出数据[当前像素索引 + 0] = 0;
-        输出数据[当前像素索引 + 1] = 0;
-        输出数据[当前像素索引 + 2] = 0;
-        输出数据[当前像素索引 + 3] = 0;
+        输出索引[y * 宽度 + x] = 透明颜色ID;
         continue;
       }
 
@@ -227,46 +238,45 @@ export function 执行抖动量化(
       G = Math.max(0, Math.min(255, G));
       B = Math.max(0, Math.min(255, B));
 
-      // 通过查找表查找最近染料 / Find nearest dye via lookup table
-      const 染料 = 通过查找表查找染料(R, G, B);
-
-      // 写入输出 / Write output
-      输出数据[当前像素索引 + 0] = 染料.红;
-      输出数据[当前像素索引 + 1] = 染料.绿;
-      输出数据[当前像素索引 + 2] = 染料.蓝;
-      输出数据[当前像素索引 + 3] = 原始Alpha;
+      // 通过查找表查找最近 Color ID / Find nearest Color ID via lookup table
+      const colorId = 通过查找表查找颜色ID(R, G, B);
+      输出索引[y * 宽度 + x] = colorId;
 
       // ---- 计算量化误差并扩散 / Compute quantization error and diffuse ----
       if (强度 > 0) {
-        const 误差R = (R - 染料.红) * 强度;
-        const 误差G = (G - 染料.绿) * 强度;
-        const 误差B = (B - 染料.蓝) * 强度;
+        // 通过映射表快速查找 Color ID 对应的 RGB / Fast lookup RGB for Color ID via map
+        const 颜色RGB = 编号到RGB快速映射.get(colorId);
+        if (颜色RGB) {
+          const 误差R = (R - 颜色RGB.红) * 强度;
+          const 误差G = (G - 颜色RGB.绿) * 强度;
+          const 误差B = (B - 颜色RGB.蓝) * 强度;
 
-        // Floyd-Steinberg 误差扩散权重 / FS error diffusion weights
-        //        当前    右(7/16)
-        // 左下(3/16) 下(5/16) 右下(1/16)
-        const 扩散误差 = (
-          dx: number, dy: number, 权重: number,
-          误差R: number, 误差G: number, 误差B: number
-        ) => {
-          const nx = x + dx;
-          const ny = y + dy;
-          // 边界检查 / Boundary check
-          if (nx < 0 || nx >= 宽度 || ny < 0 || ny >= 高度) return;
-          const n索引 = (ny * 宽度 + nx) * 3;
-          工作缓冲区[n索引 + 0] += 误差R * 权重;
-          工作缓冲区[n索引 + 1] += 误差G * 权重;
-          工作缓冲区[n索引 + 2] += 误差B * 权重;
-        };
+          // Floyd-Steinberg 误差扩散权重 / FS error diffusion weights
+          //        当前    右(7/16)
+          // 左下(3/16) 下(5/16) 右下(1/16)
+          const 扩散误差 = (
+            dx: number, dy: number, 权重: number,
+            误差R: number, 误差G: number, 误差B: number
+          ) => {
+            const nx = x + dx;
+            const ny = y + dy;
+            // 边界检查 / Boundary check
+            if (nx < 0 || nx >= 宽度 || ny < 0 || ny >= 高度) return;
+            const n索引 = (ny * 宽度 + nx) * 3;
+            工作缓冲区[n索引 + 0] += 误差R * 权重;
+            工作缓冲区[n索引 + 1] += 误差G * 权重;
+            工作缓冲区[n索引 + 2] += 误差B * 权重;
+          };
 
-        // 右邻居 (7/16) / Right neighbor
-        扩散误差(1, 0, 7 / 16, 误差R, 误差G, 误差B);
-        // 左下 (3/16) / Bottom-left
-        扩散误差(-1, 1, 3 / 16, 误差R, 误差G, 误差B);
-        // 下 (5/16) / Bottom
-        扩散误差(0, 1, 5 / 16, 误差R, 误差G, 误差B);
-        // 右下 (1/16) / Bottom-right
-        扩散误差(1, 1, 1 / 16, 误差R, 误差G, 误差B);
+          // 右邻居 (7/16) / Right neighbor
+          扩散误差(1, 0, 7 / 16, 误差R, 误差G, 误差B);
+          // 左下 (3/16) / Bottom-left
+          扩散误差(-1, 1, 3 / 16, 误差R, 误差G, 误差B);
+          // 下 (5/16) / Bottom
+          扩散误差(0, 1, 5 / 16, 误差R, 误差G, 误差B);
+          // 右下 (1/16) / Bottom-right
+          扩散误差(1, 1, 1 / 16, 误差R, 误差G, 误差B);
+        }
       }
     }
   }
@@ -274,7 +284,7 @@ export function 执行抖动量化(
   return {
     宽度,
     高度,
-    数据: 输出数据,
+    数据: 输出索引,
   };
 }
 

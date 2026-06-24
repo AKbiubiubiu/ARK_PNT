@@ -25,7 +25,13 @@ import { 方舟画布预览 } from './components/方舟画布预览';
 import { 逆向解析舱 } from './components/逆向解析舱';
 
 import { 从文件加载图像 } from './lib/图像工具';
-import { 生成Pnt字节流, 下载二进制文件, type 像素矩阵类型 } from './lib/Pnt二进制引擎';
+import {
+  生成Pnt字节流,
+  下载二进制文件,
+  索引转RGBA,
+  type 像素矩阵类型,
+  type 索引像素矩阵类型,
+} from './lib/Pnt二进制引擎';
 import { 执行抖动量化, 重采样图像, 初始化查找表 } from './lib/抖动量化引擎';
 
 // 目标尺寸选项 / Target size options
@@ -45,6 +51,9 @@ export default function App() {
   const [加载的图像, set加载的图像] = useState<HTMLImageElement | null>(null);
   const [原图加载中, set原图加载中] = useState(false);
   const [裁剪后像素, set裁剪后像素] = useState<像素矩阵类型 | null>(null);
+  // 量化后的 Color ID 索引（用于生成 .pnt）/ Quantized Color ID indices (for .pnt)
+  const [量化后索引, set量化后索引] = useState<索引像素矩阵类型 | null>(null);
+  // 量化后的 RGBA 像素（用于画布预览）/ Quantized RGBA pixels (for canvas preview)
   const [量化后像素, set量化后像素] = useState<像素矩阵类型 | null>(null);
   const [目标尺寸, set目标尺寸] = useState<number>(256);
   const [抖动强度, set抖动强度] = useState<number>(1.0);
@@ -69,6 +78,7 @@ export default function App() {
       const 图像 = await 从文件加载图像(文件);
       set加载的图像(图像);
       set裁剪后像素(null);
+      set量化后索引(null);
       set量化后像素(null);
     } catch (错误) {
       console.error('图像加载失败 / Image load failed:', 错误);
@@ -88,6 +98,7 @@ export default function App() {
   // ---- 当裁剪像素或参数变化时，执行重采样 + 量化 / Resample + quantize on change ----
   useEffect(() => {
     if (!裁剪后像素) {
+      set量化后索引(null);
       set量化后像素(null);
       return;
     }
@@ -95,9 +106,11 @@ export default function App() {
     try {
       // 重采样到目标尺寸 / Resample to target size
       const 重采样像素 = 重采样图像(裁剪后像素, 目标尺寸, 目标尺寸);
-      // 执行抖动量化 / Perform dithering quantization
-      const 量化像素 = 执行抖动量化(重采样像素, 抖动强度);
-      set量化后像素(量化像素);
+      // 执行抖动量化，输出 Color ID 索引 / Perform dithering, output Color ID indices
+      const 量化索引 = 执行抖动量化(重采样像素, 抖动强度);
+      set量化后索引(量化索引);
+      // 将索引转为 RGBA 用于画布预览 / Convert indices to RGBA for canvas preview
+      set量化后像素(索引转RGBA(量化索引));
     } catch (错误) {
       console.error('量化失败 / Quantization failed:', 错误);
     }
@@ -105,7 +118,7 @@ export default function App() {
 
   // ---- 导出 PNT / Export PNT ----
   const 处理导出 = useCallback(async () => {
-    if (!量化后像素) return;
+    if (!量化后索引) return;
     set导出中(true);
     set导出成功(false);
 
@@ -113,8 +126,8 @@ export default function App() {
       // 模拟微小延迟以展示加载动效 / Simulate slight delay for loading animation
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // 生成 .pnt 字节流 / Generate .pnt byte stream
-      const 字节流 = 生成Pnt字节流(量化后像素);
+      // 生成 .pnt 字节流（使用 Color ID 索引）/ Generate .pnt byte stream (using Color ID indices)
+      const 字节流 = 生成Pnt字节流(量化后索引);
 
       // 触发下载 / Trigger download
       const 文件名 = `方舟绘画_${选中对象.后缀}.pnt`;
@@ -127,7 +140,7 @@ export default function App() {
     } finally {
       set导出中(false);
     }
-  }, [量化后像素, 选中对象]);
+  }, [量化后索引, 选中对象]);
 
   // ---- 切换目标对象时自动调整尺寸 / Auto-adjust size on object change ----
   const 切换对象 = useCallback((对象: typeof 目标对象列表[number]) => {
@@ -206,7 +219,7 @@ export default function App() {
                       将你的图片转换为方舟绘画
                     </h2>
                     <p className="text-sm text-gray-500 md:text-base">
-                      像素级丝滑编辑 · 25 种官方染料精准量化 · 二进制严丝合缝
+                      像素级丝滑编辑 · 127 种官方颜色精准量化 · 二进制严丝合缝
                     </p>
                   </motion.div>
 
@@ -249,6 +262,7 @@ export default function App() {
                         onClick={() => {
                           set加载的图像(null);
                           set裁剪后像素(null);
+                          set量化后索引(null);
                           set量化后像素(null);
                         }}
                         className="btn-secondary text-sm"
@@ -452,7 +466,7 @@ export default function App() {
             方舟 PNT 工坊 · 基于 Floyd-Steinberg 抖动 + redmean 感知距离 + 预计算查找表
           </p>
           <p className="mt-1 text-[11px] text-gray-400">
-            数据来源：ARK Fandom Wiki · 25 种官方染料 · 二进制规范 8B 头 + W×H×4 BGRA
+            数据来源：ARK Fandom Wiki · 127 种官方颜色（ID 0-100 + 201-226）· 二进制规范 20B 头 + W×H×1 索引色
           </p>
         </div>
       </footer>

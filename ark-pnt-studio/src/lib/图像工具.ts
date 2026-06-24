@@ -8,6 +8,10 @@ import type { 像素矩阵类型 } from './Pnt二进制引擎';
 /**
  * 从 File 对象加载图像 / Load image from File object
  * ================================================================
+ * 注意：不立即撤销 Object URL，因为 react-easy-crop 需要通过 img.src 重新加载图像。
+ * Note: Does NOT immediately revoke Object URL, because react-easy-crop needs
+ * to reload the image via img.src. URL persists for component lifetime.
+ *
  * @param 文件 - 图片文件 / Image file
  * @returns HTMLImageElement / Loaded image element
  * @throws 当文件不是有效图片时抛出 / Throws when file is not a valid image
@@ -23,7 +27,8 @@ export function 从文件加载图像(文件: File): Promise<HTMLImageElement> {
     const url = URL.createObjectURL(文件);
     const img = new Image();
     img.onload = () => {
-      URL.revokeObjectURL(url);
+      // 不撤销 URL，保持 img.src 可用 / Do NOT revoke URL, keep img.src usable
+      // react-easy-crop 会通过 src 重新加载图像 / react-easy-crop reloads via src
       resolve(img);
     };
     img.onerror = () => {
