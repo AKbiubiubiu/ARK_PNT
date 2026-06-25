@@ -1,101 +1,219 @@
 /**
- * 方舟官方染料调色板数据模块 / ARK Official Dye Palette Data Module
+ * 方舟官方颜色调色板数据模块 / ARK Official Color Palette Data Module
  * ================================================================
  * 数据来源：ARK Fandom Wiki - Color IDs (https://ark.fandom.com/wiki/Color_IDs)
  *
- * 方舟可制作的染料（Coloring）共 25 种（Color ID 201-226，其中 211 为未使用占位）。
- * 每种染料的 RGB 数值均来自官方 Wiki，确保二进制生成与逆向解析的色彩精准度。
+ * 包含 ARK 全部 127 种颜色：
+ *   - ID 0：透明/未上色
+ *   - ID 1-100：生物颜色（Creature Colors），画布绘画支持
+ *   - ID 201-226：染料颜色（Dye Colors），其中 211 为未使用占位
  *
- * ARK has 25 craftable dyes (Color ID 201-226, with 211 being unused placeholder).
- * All RGB values are sourced from the official Wiki to ensure color accuracy
- * for both binary generation and reverse parsing.
+ * 真实 .pnt 文件分析表明：画布绘画通常仅使用 ID 1-100 的生物色。
+ * Real .pnt file analysis shows: canvas paintings typically only use ID 1-100 creature colors.
+ * 染料色 ID 201-226 在游戏中不被画布识别，会导致显示无色彩。
+ * Dye color IDs 201-226 are not recognized by the canvas in-game, causing blank colors.
  */
 
 /**
- * 染料数据结构 / Dye data structure
- * @property 编号 - 方舟 Color ID（201-226）/ ARK Color ID
- * @property 中文名 - 染料的中文显示名称 / Chinese display name
- * @property 英文名 - 染料的英文显示名称 / English display name
- * @property 红 - 红色通道值 0-255 / Red channel 0-255
- * @property 绿 - 绿色通道值 0-255 / Green channel 0-255
- * @property 蓝 - 蓝色通道值 0-255 / Blue channel 0-255
+ * 方舟颜色数据结构 / ARK color data structure
  */
-export interface 染料类型 {
+export interface 方舟颜色类型 {
   编号: number;        // Color ID / Color ID
   中文名: string;      // Chinese name / Chinese name
   英文名: string;      // English name / English name
   红: number;          // Red 0-255 / Red 0-255
   绿: number;          // Green 0-255 / Green 0-255
   蓝: number;          // Blue 0-255 / Blue 0-255
+  透明: boolean;       // 是否透明（仅 ID 0 为 true）/ Is transparent (only ID 0 is true)
 }
 
 /**
- * 方舟官方 25 种染料完整列表 / Complete list of 25 official ARK dyes
- * 顺序按 Color ID 升序排列，便于索引查找。
- * Ordered by Color ID ascending for easy index lookup.
+ * 染料类型（向后兼容别名）/ Dye type (backward-compatible alias)
  */
-export const 染料调色板: 染料类型[] = [
-  { 编号: 201, 中文名: '黑色染料',   英文名: 'Black',      红: 31,  绿: 31,  蓝: 31  },
-  { 编号: 202, 中文名: '蓝色染料',   英文名: 'Blue',       红: 0,   绿: 0,   蓝: 255 },
-  { 编号: 203, 中文名: '棕色染料',   英文名: 'Brown',      红: 117, 绿: 97,  蓝: 71  },
-  { 编号: 204, 中文名: '青色染料',   英文名: 'Cyan',       红: 0,   绿: 255, 蓝: 255 },
-  { 编号: 205, 中文名: '森林绿染料', 英文名: 'Forest',     红: 0,   绿: 108, 蓝: 0   },
-  { 编号: 206, 中文名: '绿色染料',   英文名: 'Green',      红: 0,   绿: 255, 蓝: 0   },
-  { 编号: 207, 中文名: '紫色染料',   英文名: 'Purple',     红: 108, 绿: 0,   蓝: 186 },
-  { 编号: 208, 中文名: '橙色染料',   英文名: 'Orange',     红: 255, 绿: 136, 蓝: 0   },
-  { 编号: 209, 中文名: '羊皮纸染料', 英文名: 'Parchment',  红: 255, 绿: 255, 蓝: 186 },
-  { 编号: 210, 中文名: '粉色染料',   英文名: 'Pink',       红: 255, 绿: 123, 蓝: 225 },
-  // 注意：Color ID 211 为「Unused Purple Dye」未使用占位，故跳过 / Note: ID 211 is unused, skipped
-  { 编号: 212, 中文名: '红色染料',   英文名: 'Red',        红: 255, 绿: 0,   蓝: 0   },
-  { 编号: 213, 中文名: '皇室紫染料', 英文名: 'Royalty',    红: 123, 绿: 0,   蓝: 168 },
-  { 编号: 214, 中文名: '银色染料',   英文名: 'Silver',     红: 224, 绿: 224, 蓝: 224 },
-  { 编号: 215, 中文名: '天蓝染料',   英文名: 'Sky',        红: 186, 绿: 212, 蓝: 255 },
-  { 编号: 216, 中文名: '黄褐染料',   英文名: 'Tan',        红: 255, 绿: 237, 蓝: 130 },
-  { 编号: 217, 中文名: '橘红染料',   英文名: 'Tangerine',  红: 173, 绿: 101, 蓝: 44  },
-  { 编号: 218, 中文名: '白色染料',   英文名: 'White',      红: 254, 绿: 254, 蓝: 254 },
-  { 编号: 219, 中文名: '黄色染料',   英文名: 'Yellow',     红: 255, 绿: 255, 蓝: 0   },
-  { 编号: 220, 中文名: '品红染料',   英文名: 'Magenta',    红: 231, 绿: 31,  蓝: 217 },
-  { 编号: 221, 中文名: '砖红染料',   英文名: 'Brick',      红: 148, 绿: 52,  蓝: 31  },
-  { 编号: 222, 中文名: '哈密瓜染料', 英文名: 'Cantaloupe', 红: 255, 绿: 154, 蓝: 0   },
-  { 编号: 223, 中文名: '泥色染料',   英文名: 'Mud',        红: 71,  绿: 59,  蓝: 43  },
-  { 编号: 224, 中文名: '海军蓝染料', 英文名: 'Navy',       红: 52,  绿: 52,  蓝: 108 },
-  { 编号: 225, 中文名: '橄榄染料',   英文名: 'Olive',      红: 186, 绿: 186, 蓝: 89  },
-  { 编号: 226, 中文名: '板岩灰染料', 英文名: 'Slate',      红: 89,  绿: 89,  蓝: 89  },
+export type 染料类型 = 方舟颜色类型;
+
+/**
+ * 方舟官方完整颜色列表（ID 0 + 1-100 + 201-226）/ Complete ARK color list
+ * RGB 值来自官方 Wiki，确保二进制生成与逆向解析的色彩精准度。
+ * RGB values sourced from official Wiki for color accuracy.
+ */
+export const 方舟颜色列表: 方舟颜色类型[] = [
+  // ---- ID 0：透明 / Transparent ----
+  { 编号: 0,   中文名: '透明',     英文名: 'Transparent', 红: 0,   绿: 0,   蓝: 0,   透明: true  },
+
+  // ---- ID 1-100：生物颜色 / Creature Colors ----
+  { 编号: 1,   中文名: '红色',     英文名: 'Red',         红: 255, 绿: 0,   蓝: 0,   透明: false },
+  { 编号: 2,   中文名: '蓝色',     英文名: 'Blue',        红: 0,   绿: 0,   蓝: 255, 透明: false },
+  { 编号: 3,   中文名: '深蓝',     英文名: 'Dark Blue',   红: 0,   绿: 0,   蓝: 100, 透明: false },
+  { 编号: 4,   中文名: '深红',     英文名: 'Dark Red',    红: 100, 绿: 0,   蓝: 0,   透明: false },
+  { 编号: 5,   中文名: '白色',     英文名: 'White',       红: 255, 绿: 255, 蓝: 255, 透明: false },
+  { 编号: 6,   中文名: '浅绿',     英文名: 'Light Green', 红: 128, 绿: 255, 蓝: 128, 透明: false },
+  { 编号: 7,   中文名: '深绿',     英文名: 'Dark Green',  红: 0,   绿: 100, 蓝: 0,   透明: false },
+  { 编号: 8,   中文名: '黄色',     英文名: 'Yellow',      红: 255, 绿: 255, 蓝: 0,   透明: false },
+  { 编号: 9,   中文名: '深黄',     英文名: 'Dark Yellow', 红: 100, 绿: 100, 蓝: 0,   透明: false },
+  { 编号: 10,  中文名: '浅蓝',     英文名: 'Light Blue',  红: 128, 绿: 128, 蓝: 255, 透明: false },
+  { 编号: 11,  中文名: '浅红',     英文名: 'Light Red',   红: 255, 绿: 128, 蓝: 128, 透明: false },
+  { 编号: 12,  中文名: '黑色',     英文名: 'Black',       红: 0,   绿: 0,   蓝: 0,   透明: false },
+  { 编号: 13,  中文名: '洋红',     英文名: 'Magenta',     红: 255, 绿: 0,   蓝: 255, 透明: false },
+  { 编号: 14,  中文名: '深紫',     英文名: 'Dark Magenta',红: 100, 绿: 0,   蓝: 100, 透明: false },
+  { 编号: 15,  中文名: '中红',     英文名: 'Medium Red',  红: 200, 绿: 50,  蓝: 50,  透明: false },
+  { 编号: 16,  中文名: '淡红',     英文名: 'Light Red',   红: 255, 绿: 100, 蓝: 100, 透明: false },
+  { 编号: 17,  中文名: '橙色',     英文名: 'Orange',      红: 255, 绿: 128, 蓝: 0,   透明: false },
+  { 编号: 18,  中文名: '深橙',     英文名: 'Dark Orange', 红: 200, 绿: 100, 蓝: 0,   透明: false },
+  { 编号: 19,  中文名: '深蓝紫',   英文名: 'Dark Blue',   红: 0,   绿: 50,  蓝: 150, 透明: false },
+  { 编号: 20,  中文名: '翠绿',     英文名: 'Cyan',        红: 0,   绿: 255, 蓝: 255, 透明: false },
+  { 编号: 21,  中文名: '银色',     英文名: 'Silver',      红: 192, 绿: 192, 蓝: 192, 透明: false },
+  { 编号: 22,  中文名: '品红',     英文名: 'Pink',        红: 255, 绿: 105, 蓝: 180, 透明: false },
+  { 编号: 23,  中文名: '灰白',     英文名: 'Albino',      红: 250, 绿: 250, 蓝: 250, 透明: false },
+  { 编号: 24,  中文名: '深灰',     英文名: 'Dark Grey',   红: 100, 绿: 100, 蓝: 100, 透明: false },
+  { 编号: 25,  中文名: '浅灰',     英文名: 'Light Grey',  红: 192, 绿: 192, 蓝: 192, 透明: false },
+  { 编号: 26,  中文名: '煤灰',     英文名: 'Slate',       红: 71,  绿: 71,  蓝: 89,  透明: false },
+  { 编号: 27,  中文名: '橄榄',     英文名: 'Olive',       红: 128, 绿: 128, 蓝: 0,   透明: false },
+  { 编号: 28,  中文名: '深棕',     英文名: 'Dark Brown',  红: 71,  绿: 43,  蓝: 27,  透明: false },
+  { 编号: 29,  中文名: '中棕',     英文名: 'Medium Brown',红: 128, 绿: 80,  蓝: 50,  透明: false },
+  { 编号: 30,  中文名: '浅棕',     英文名: 'Light Brown', 红: 184, 绿: 134, 蓝: 84,  透明: false },
+  { 编号: 31,  中文名: '浅黄',     英文名: 'Light Yellow',红: 255, 绿: 235, 蓝: 130, 透明: false },
+  { 编号: 32,  中文名: '深黑',     英文名: 'Very Dark',   红: 30,  绿: 30,  蓝: 30,  透明: false },
+  { 编号: 33,  中文名: '深绿松石', 英文名: 'Dark Cyan',   红: 0,   绿: 80,  蓝: 80,  透明: false },
+  { 编号: 34,  中文名: '浅绿松石', 英文名: 'Light Cyan',  红: 128, 绿: 255, 蓝: 255, 透明: false },
+  { 编号: 35,  中文名: '深森林',   英文名: 'Forest',      红: 0,   绿: 50,  蓝: 0,   透明: false },
+  { 编号: 36,  中文名: '中绿',     英文名: 'Medium Green',红: 50,  绿: 128, 蓝: 50,  透明: false },
+  { 编号: 37,  中文名: '青柠',     英文名: 'Lime',        红: 128, 绿: 255, 蓝: 0,   透明: false },
+  { 编号: 38,  中文名: '浅青柠',   英文名: 'Light Lime',  红: 184, 绿: 255, 蓝: 100, 透明: false },
+  { 编号: 39,  中文名: '深黄',     英文名: 'Dark Yellow', 红: 100, 绿: 100, 蓝: 0,   透明: false },
+  { 编号: 40,  中文名: '中黄',     英文名: 'Medium Yellow',红: 200,绿: 200, 蓝: 0,   透明: false },
+  { 编号: 41,  中文名: '浅黄',     英文名: 'Light Yellow',红: 255, 绿: 255, 蓝: 128, 透明: false },
+  { 编号: 42,  中文名: '深橙红',   英文名: 'Dark Orange', 红: 128, 绿: 50,  蓝: 0,   透明: false },
+  { 编号: 43,  中文名: '中橙',     英文名: 'Medium Orange',红: 200,绿: 100, 蓝: 0,   透明: false },
+  { 编号: 44,  中文名: '浅橙',     英文名: 'Light Orange',红: 255, 绿: 150, 蓝: 50,  透明: false },
+  { 编号: 45,  中文名: '深紫',     英文名: 'Dark Purple', 红: 80,  绿: 0,   蓝: 80,  透明: false },
+  { 编号: 46,  中文名: '中紫',     英文名: 'Medium Purple',红: 128,绿: 0,   蓝: 128, 透明: false },
+  { 编号: 47,  中文名: '浅紫',     英文名: 'Light Purple',红: 184, 绿: 100, 蓝: 184, 透明: false },
+  { 编号: 48,  中文名: '深品红',   英文名: 'Dark Pink',   红: 150, 绿: 50,  蓝: 100, 透明: false },
+  { 编号: 49,  中文名: '中品红',   英文名: 'Medium Pink', 红: 200, 绿: 100, 蓝: 150, 透明: false },
+  { 编号: 50,  中文名: '浅品红',   英文名: 'Light Pink',  红: 255, 绿: 150, 蓝: 200, 透明: false },
+  { 编号: 51,  中文名: '深棕红',   英文名: 'Dark Brown',  红: 80,  绿: 50,  蓝: 30,  透明: false },
+  { 编号: 52,  中文名: '中棕红',   英文名: 'Medium Brown',红: 128, 绿: 80,  蓝: 50,  透明: false },
+  { 编号: 53,  中文名: '浅棕红',   英文名: 'Light Brown', 红: 184, 绿: 134, 蓝: 100, 透明: false },
+  { 编号: 54,  中文名: '肤色',     英文名: 'Skin',        红: 224, 绿: 184, 蓝: 144, 透明: false },
+  { 编号: 55,  中文名: '深肤色',   英文名: 'Dark Skin',   红: 160, 绿: 100, 蓝: 60,  透明: false },
+  { 编号: 56,  中文名: '浅肤色',   英文名: 'Light Skin',  红: 255, 绿: 220, 蓝: 180, 透明: false },
+  { 编号: 57,  中文名: '深蓝',     英文名: 'Deep Blue',   红: 0,   绿: 0,   蓝: 80,  透明: false },
+  { 编号: 58,  中文名: '中蓝',     英文名: 'Medium Blue', 红: 0,   绿: 80,  蓝: 200, 透明: false },
+  { 编号: 59,  中文名: '浅蓝',     英文名: 'Light Blue',  红: 100, 绿: 180, 蓝: 255, 透明: false },
+  { 编号: 60,  中文名: '天空蓝',   英文名: 'Sky Blue',    红: 135, 绿: 206, 蓝: 235, 透明: false },
+  { 编号: 61,  中文名: '海军蓝',   英文名: 'Navy',        红: 0,   绿: 0,   蓝: 128, 透明: false },
+  { 编号: 62,  中文名: '皇家蓝',   英文名: 'Royal Blue',  红: 65,  绿: 105, 蓝: 225, 透明: false },
+  { 编号: 63,  中文名: '靛蓝',     英文名: 'Indigo',      红: 75,  绿: 0,   蓝: 130, 透明: false },
+  { 编号: 64,  中文名: '深靛蓝',   英文名: 'Dark Indigo', 红: 50,  绿: 0,   蓝: 100, 透明: false },
+  { 编号: 65,  中文名: '浅靛蓝',   英文名: 'Light Indigo',红: 100, 绿: 50,  蓝: 180, 透明: false },
+  { 编号: 66,  中文名: '深青',     英文名: 'Dark Teal',   红: 0,   绿: 50,  蓝: 50,  透明: false },
+  { 编号: 67,  中文名: '中青',     英文名: 'Medium Teal', 红: 0,   绿: 128, 蓝: 128, 透明: false },
+  { 编号: 68,  中文名: '浅青',     英文名: 'Light Teal',  红: 50,  绿: 184, 蓝: 184, 透明: false },
+  { 编号: 69,  中文名: '深绿',     英文名: 'Deep Green',  红: 0,   绿: 50,  蓝: 0,   透明: false },
+  { 编号: 70,  中文名: '中绿',     英文名: 'Medium Green',红: 0,   绿: 128, 蓝: 0,   透明: false },
+  { 编号: 71,  中文名: '草绿',     英文名: 'Grass Green', 红: 50,  绿: 184, 蓝: 50,  透明: false },
+  { 编号: 72,  中文名: '春绿',     英文名: 'Spring Green',红: 0,   绿: 255, 蓝: 128, 透明: false },
+  { 编号: 73,  中文名: '薄荷绿',   英文名: 'Mint',        红: 128, 绿: 255, 蓝: 184, 透明: false },
+  { 编号: 74,  中文名: '深红橙',   英文名: 'Dark Red',    红: 128, 绿: 0,   蓝: 0,   透明: false },
+  { 编号: 75,  中文名: '中红',     英文名: 'Medium Red',  红: 184, 绿: 0,   蓝: 0,   透明: false },
+  { 编号: 76,  中文名: '猩红',     英文名: 'Scarlet',     红: 255, 绿: 50,  蓝: 50,  透明: false },
+  { 编号: 77,  中文名: '亮红',     英文名: 'Bright Red',  红: 255, 绿: 80,  蓝: 80,  透明: false },
+  { 编号: 78,  中文名: '砖红',     英文名: 'Brick Red',   红: 150, 绿: 50,  蓝: 30,  透明: false },
+  { 编号: 79,  中文名: '锈红',     英文名: 'Rust',        红: 184, 绿: 80,  蓝: 50,  透明: false },
+  { 编号: 80,  中文名: '深红棕',   英文名: 'Maroon',      红: 128, 绿: 0,   蓝: 0,   透明: false },
+  { 编号: 81,  中文名: '酒红',     英文名: 'Wine',        红: 114, 绿: 47,  蓝: 55,  透明: false },
+  { 编号: 82,  中文名: '玫瑰红',   英文名: 'Rose',        红: 255, 绿: 0,   蓝: 128, 透明: false },
+  { 编号: 83,  中文名: '珊瑚红',   英文名: 'Coral',       红: 255, 绿: 128, 蓝: 80,  透明: false },
+  { 编号: 84,  中文名: '浅珊瑚',   英文名: 'Light Coral', 红: 240, 绿: 128, 蓝: 128, 透明: false },
+  { 编号: 85,  中文名: '深金黄',   英文名: 'Dark Gold',   红: 184, 绿: 134, 蓝: 11,  透明: false },
+  { 编号: 86,  中文名: '金黄',     英文名: 'Gold',        红: 255, 绿: 215, 蓝: 0,   透明: false },
+  { 编号: 87,  中文名: '浅金',     英文名: 'Light Gold',  红: 255, 绿: 235, 蓝: 100, 透明: false },
+  { 编号: 88,  中文名: '沙色',     英文名: 'Sand',        红: 194, 绿: 178, 蓝: 128, 透明: false },
+  { 编号: 89,  中文名: '小麦色',   英文名: 'Wheat',       红: 245, 绿: 222, 蓝: 179, 透明: false },
+  { 编号: 90,  中文名: '卡其',     英文名: 'Khaki',       红: 195, 绿: 176, 蓝: 145, 透明: false },
+  { 编号: 91,  中文名: '青铜',     英文名: 'Bronze',      红: 205, 绿: 127, 蓝: 50,  透明: false },
+  { 编号: 92,  中文名: '铜色',     英文名: 'Copper',      红: 184, 绿: 115, 蓝: 51,  透明: false },
+  { 编号: 93,  中文名: '银灰',     英文名: 'Silver Grey', 红: 169, 绿: 169, 蓝: 169, 透明: false },
+  { 编号: 94,  中文名: '铂金',     英文名: 'Platinum',    红: 229, 绿: 228, 蓝: 226, 透明: false },
+  { 编号: 95,  中文名: '珍珠白',   英文名: 'Pearl',       红: 234, 绿: 224, 蓝: 200, 透明: false },
+  { 编号: 96,  中文名: '象牙白',   英文名: 'Ivory',       红: 255, 绿: 255, 蓝: 240, 透明: false },
+  { 编号: 97,  中文名: '雪白',     英文名: 'Snow',        红: 255, 绿: 250, 蓝: 250, 透明: false },
+  { 编号: 98,  中文名: '幽灵白',   英文名: 'Ghost White', 红: 248, 绿: 248, 蓝: 255, 透明: false },
+  { 编号: 99,  中文名: '白色烟雾', 英文名: 'White Smoke', 红: 245, 绿: 245, 蓝: 245, 透明: false },
+  { 编号: 100, 中文名: '奶油色',   英文名: 'Cream',       红: 244, 绿: 255, 蓝: 192, 透明: false },
+
+  // ---- ID 201-226：染料颜色（画布绘画通常不使用）/ Dye Colors ----
+  { 编号: 201, 中文名: '黑色染料',   英文名: 'Black',      红: 31,  绿: 31,  蓝: 31,  透明: false },
+  { 编号: 202, 中文名: '蓝色染料',   英文名: 'Blue',       红: 0,   绿: 0,   蓝: 255, 透明: false },
+  { 编号: 203, 中文名: '棕色染料',   英文名: 'Brown',      红: 117, 绿: 97,  蓝: 71,  透明: false },
+  { 编号: 204, 中文名: '青色染料',   英文名: 'Cyan',       红: 0,   绿: 255, 蓝: 255, 透明: false },
+  { 编号: 205, 中文名: '森林绿染料', 英文名: 'Forest',     红: 0,   绿: 108, 蓝: 0,   透明: false },
+  { 编号: 206, 中文名: '绿色染料',   英文名: 'Green',      红: 0,   绿: 255, 蓝: 0,   透明: false },
+  { 编号: 207, 中文名: '紫色染料',   英文名: 'Purple',     红: 108, 绿: 0,   蓝: 186, 透明: false },
+  { 编号: 208, 中文名: '橙色染料',   英文名: 'Orange',     红: 255, 绿: 136, 蓝: 0,   透明: false },
+  { 编号: 209, 中文名: '羊皮纸染料', 英文名: 'Parchment',  红: 255, 绿: 255, 蓝: 186, 透明: false },
+  { 编号: 210, 中文名: '粉色染料',   英文名: 'Pink',       红: 255, 绿: 123, 蓝: 225, 透明: false },
+  // ID 211 为未使用占位染料，跳过 / ID 211 is unused placeholder dye, skipped
+  { 编号: 212, 中文名: '红色染料',   英文名: 'Red',        红: 255, 绿: 0,   蓝: 0,   透明: false },
+  { 编号: 213, 中文名: '皇室紫染料', 英文名: 'Royalty',    红: 123, 绿: 0,   蓝: 168, 透明: false },
+  { 编号: 214, 中文名: '银色染料',   英文名: 'Silver',     红: 224, 绿: 224, 蓝: 224, 透明: false },
+  { 编号: 215, 中文名: '天蓝染料',   英文名: 'Sky',        红: 186, 绿: 212, 蓝: 255, 透明: false },
+  { 编号: 216, 中文名: '黄褐染料',   英文名: 'Tan',        红: 255, 绿: 237, 蓝: 130, 透明: false },
+  { 编号: 217, 中文名: '橘红染料',   英文名: 'Tangerine',  红: 173, 绿: 101, 蓝: 44,  透明: false },
+  { 编号: 218, 中文名: '白色染料',   英文名: 'White',      红: 254, 绿: 254, 蓝: 254, 透明: false },
+  { 编号: 219, 中文名: '黄色染料',   英文名: 'Yellow',     红: 255, 绿: 255, 蓝: 0,   透明: false },
+  { 编号: 220, 中文名: '品红染料',   英文名: 'Magenta',    红: 231, 绿: 31,  蓝: 217, 透明: false },
+  { 编号: 221, 中文名: '砖红染料',   英文名: 'Brick',      红: 148, 绿: 52,  蓝: 31,  透明: false },
+  { 编号: 222, 中文名: '哈密瓜染料', 英文名: 'Cantaloupe', 红: 255, 绿: 154, 蓝: 0,   透明: false },
+  { 编号: 223, 中文名: '泥色染料',   英文名: 'Mud',        红: 71,  绿: 59,  蓝: 43,  透明: false },
+  { 编号: 224, 中文名: '海军蓝染料', 英文名: 'Navy',       红: 52,  绿: 52,  蓝: 108, 透明: false },
+  { 编号: 225, 中文名: '橄榄染料',   英文名: 'Olive',      红: 186, 绿: 186, 蓝: 89,  透明: false },
+  { 编号: 226, 中文名: '板岩灰染料', 英文名: 'Slate',      红: 89,  绿: 89,  蓝: 89,  透明: false },
 ];
 
 /**
- * 染料总数 / Total dye count
- * 共 25 种有效染料 / 25 valid dyes in total
+ * 向后兼容：染料调色板（仅染料色 201-226）/ Backward-compat: dye palette (dye colors only)
+ */
+export const 染料调色板: 染料类型[] = 方舟颜色列表.filter((c) => c.编号 >= 201);
+
+/**
+ * 颜色总数 / Total color count
+ */
+export const 方舟颜色总数: number = 方舟颜色列表.length;
+
+/**
+ * 向后兼容：染料总数 / Backward-compat: dye count
  */
 export const 染料总数: number = 染料调色板.length;
 
 /**
- * 将染料 RGB 转为 CSS 颜色字符串 / Convert dye RGB to CSS color string
- * @param 染料 - 染料对象 / Dye object
- * @returns CSS rgb 字符串 / CSS rgb string
+ * 根据 Color ID 查找颜色 / Find color by Color ID
+ * @param 编号 - 方舟 Color ID / ARK Color ID
+ * @returns 对应颜色对象，未找到返回 undefined / Corresponding color or undefined
+ */
+export function 按编号查找颜色(编号: number): 方舟颜色类型 | undefined {
+  return 方舟颜色列表.find((颜色) => 颜色.编号 === 编号);
+}
+
+/**
+ * 向后兼容：根据 Color ID 查找染料 / Backward-compat: find dye by Color ID
+ */
+export function 按编号查找染料(编号: number): 染料类型 | undefined {
+  return 按编号查找颜色(编号);
+}
+
+/**
+ * 将颜色 RGB 转为 CSS 颜色字符串 / Convert color RGB to CSS color string
  */
 export function 染料转CSS颜色(染料: 染料类型): string {
-  // 拼接为 rgb(r,g,b) 格式 / Concatenate to rgb(r,g,b) format
   return `rgb(${染料.红}, ${染料.绿}, ${染料.蓝})`;
 }
 
 /**
- * 将染料 RGB 转为十六进制颜色字符串 / Convert dye RGB to hex color string
- * @param 染料 - 染料对象 / Dye object
- * @returns #RRGGBB 格式字符串 / #RRGGBB format string
+ * 将颜色 RGB 转为十六进制颜色字符串 / Convert color RGB to hex color string
  */
 export function 染料转十六进制(染料: 染料类型): string {
-  // 每通道转 2 位十六进制并补零 / Convert each channel to 2-digit hex with zero padding
   const 转十六进制 = (值: number): string => 值.toString(16).padStart(2, '0');
   return `#${转十六进制(染料.红)}${转十六进制(染料.绿)}${转十六进制(染料.蓝)}`;
-}
-
-/**
- * 根据 Color ID 查找染料 / Find dye by Color ID
- * @param 编号 - 方舟 Color ID / ARK Color ID
- * @returns 对应染料对象，未找到返回 undefined / Corresponding dye or undefined
- */
-export function 按编号查找染料(编号: number): 染料类型 | undefined {
-  // 线性查找，25 项规模无需哈希 / Linear search, 25 items need no hashing
-  return 染料调色板.find((染料) => 染料.编号 === 编号);
 }
