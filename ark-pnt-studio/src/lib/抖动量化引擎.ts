@@ -8,10 +8,8 @@
  * 输出：每像素 1 字节的 ARK Color ID 索引（Uint8Array）。
  * Output: 1-byte ARK Color ID index per pixel (Uint8Array).
  *
- * 重要：仅使用 ID 1-100（生物色）进行量化匹配，不使用 ID 201-226（染料色）。
- * Important: Only use ID 1-100 (creature colors) for quantization, NOT ID 201-226 (dye colors).
- * 真实 .pnt 文件分析表明，画布绘画仅支持生物色 ID 0-100。
- * Real .pnt file analysis shows canvas paintings only support creature color IDs 0-100.
+ * 使用官方 GIMP 调色板的全部 25 种命名颜色（ID 1-25）进行量化匹配。
+ * Uses all 25 named colors (ID 1-25) from official GIMP palette for quantization.
  */
 
 import { 方舟颜色列表, 方舟颜色总数, type 方舟颜色类型 } from './染料调色板';
@@ -30,8 +28,8 @@ const 查找表掩码 = 查找表每通道级数 - 1;   // 0x1F / mask 0x1F
  * 预计算查找表 / Precomputed lookup table
  * 索引方式：(R量化 << 10) | (G量化 << 5) | B量化
  * Index: (RQuantized << 10) | (GQuantized << 5) | BQuantized
- * 值为对应的 ARK Color ID（1-100）。
- * Value is the corresponding ARK Color ID (1-100).
+ * 值为对应的 ARK Color ID（1-25）。
+ * Value is the corresponding ARK Color ID (1-25).
  */
 let 预计算查找表: Uint8Array | null = null;
 
@@ -74,15 +72,10 @@ function 计算感知距离平方(
  * 用于查找表预计算，遍历所有可用颜色找最近邻。
  * Used for lookup table precomputation, iterates all available colors to find nearest.
  *
- * 注意：跳过 ID 0（透明色），因为透明色不应参与不透明像素的量化匹配。
- * Note: Skips ID 0 (transparent), as transparent should not match opaque pixels.
- *
- * 重要：仅使用 ID 1-100（生物色），不使用 ID 201-226（染料色）。
- * Important: Only use ID 1-100 (creature colors), NOT ID 201-226 (dye colors).
- * 真实 .pnt 文件分析表明，画布绘画仅支持生物色 ID 0-100。
- * Real .pnt file analysis shows canvas paintings only support creature color IDs 0-100.
- * 染料色 ID 201-226 在游戏中不被画布识别，会导致显示无色彩。
- * Dye color IDs 201-226 are not recognized by the canvas in-game, causing blank colors.
+ * 使用官方 GIMP 调色板的全部 25 种命名颜色（ID 1-25）进行匹配。
+ * Uses all 25 named colors (ID 1-25) from official GIMP palette for matching.
+ * 跳过 ID 0（透明色），因为透明色不应参与不透明像素的量化匹配。
+ * Skips ID 0 (transparent), as transparent should not match opaque pixels.
  *
  * @param R - 红通道 0-255 / Red 0-255
  * @param G - 绿通道 0-255 / Green 0-255
@@ -90,14 +83,12 @@ function 计算感知距离平方(
  * @returns 最近颜色的 Color ID / Nearest color's Color ID
  */
 function 查找最近颜色ID(R: number, G: number, B: number): number {
-  let 最近ID = 1; // 默认 ID 1（红色）/ Default ID 1 (red)
+  let 最近ID = 1; // 默认 ID 1（黑色）/ Default ID 1 (black)
   let 最小距离 = Infinity;
   for (let i = 0; i < 方舟颜色总数; i++) {
     const 颜色 = 方舟颜色列表[i];
     // 跳过透明色 / Skip transparent color
     if (颜色.透明) continue;
-    // 跳过染料色 (ID > 100)，画布绘画不支持 / Skip dye colors (ID > 100), not supported by canvas
-    if (颜色.编号 > 100) continue;
     const 距离 = 计算感知距离平方(R, G, B, 颜色.红, 颜色.绿, 颜色.蓝);
     if (距离 < 最小距离) {
       最小距离 = 距离;
@@ -118,8 +109,8 @@ function 查找最近颜色ID(R: number, G: number, B: number): number {
 export function 初始化查找表(): void {
   if (预计算查找表 !== null) return;
 
-  // 分配 32768 项 Uint8Array（Color ID 1-100，Uint8 足够）
-  // Allocate 32768-entry Uint8Array (Color ID 1-100, Uint8 sufficient)
+  // 分配 32768 项 Uint8Array（Color ID 1-25，Uint8 足够）
+  // Allocate 32768-entry Uint8Array (Color ID 1-25, Uint8 sufficient)
   预计算查找表 = new Uint8Array(查找表每通道级数 ** 3);
 
   for (let r = 0; r < 查找表每通道级数; r++) {
@@ -142,7 +133,7 @@ export function 初始化查找表(): void {
  * @param R - 红通道 0-255 / Red 0-255
  * @param G - 绿通道 0-255 / Green 0-255
  * @param B - 蓝通道 0-255 / Blue 0-255
- * @returns Color ID (1-100) / Color ID (1-100)
+ * @returns Color ID (1-25) / Color ID (1-25)
  */
 function 通过查找表查找颜色ID(R: number, G: number, B: number): number {
   if (预计算查找表 === null) {

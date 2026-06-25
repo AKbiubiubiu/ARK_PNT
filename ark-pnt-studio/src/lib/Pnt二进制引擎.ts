@@ -20,8 +20,7 @@
  *
  * Color ID 含义：
  *   0        = 透明/未上色 / Transparent / unpainted
- *   1-100    = 生物颜色 / Creature colors
- *   201-226  = 染料颜色 / Dye colors（画布绘画通常仅使用 1-100）
+ *   1-25     = 方舟命名颜色 / ARK named colors（官方 GIMP 调色板 / official GIMP palette）
  */
 
 import { 按编号查找颜色 } from './染料调色板';

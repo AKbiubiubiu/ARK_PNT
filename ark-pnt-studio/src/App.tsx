@@ -214,7 +214,7 @@ export default function App() {
                       将你的图片转换为方舟绘画
                     </h2>
                     <p className="text-sm text-zinc-400 md:text-base">
-                      专业图像编辑 · 滤镜调整 · 文字叠加 · 101 种颜色精准量化
+                      专业图像编辑 · 滤镜调整 · 文字叠加 · 25 种官方颜色精准量化
                     </p>
                   </motion.div>
 
@@ -472,7 +472,7 @@ export default function App() {
             ARK PNT Studio · 基于 Floyd-Steinberg 抖动 + redmean 感知距离 + 预计算查找表
           </p>
           <p className="mt-1 text-[11px] text-zinc-600">
-            数据来源：ARK Fandom Wiki · 101 种画布可用颜色（ID 0-100 生物色）· 二进制规范 20B 头 + W×H×1 索引色
+            数据来源：ARK 官方 GIMP 调色板 · 25 种命名颜色 + 透明度 · 二进制规范 20B 头 + W×H×1 索引色
           </p>
         </div>
       </footer>
